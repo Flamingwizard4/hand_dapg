@@ -4,13 +4,14 @@ Note that DAPG generalizes PG and BC init + PG finetuning.
 With appropriate settings of parameters, we can recover the full family.
 """
 
-from mjrl.utils.gym_env import GymEnv
-from mjrl.policies.gaussian_mlp import MLP
+from mjrl.utils.gym_env_rnn import GymEnv
+from mjrl.policies.rnn import RNN
+#from mjrl.policies.gaussian_mlp import MLP
 from mjrl.baselines.quadratic_baseline import QuadraticBaseline
-from mjrl.baselines.mlp_baseline import MLPBaseline
+#from mjrl.baselines.mlp_baseline import MLPBaseline
 from mjrl.algos.npg_cg import NPG
 from mjrl.algos.dapg import DAPG
-from mjrl.algos.behavior_cloning import BC
+from mjrl.algos.rnn_behavior_cloning import rnn_BC
 from mjrl.utils.train_agent import train_agent
 from mjrl.samplers.core import sample_paths
 import os
@@ -47,9 +48,10 @@ with open(EXP_FILE, 'w') as f:
 # ===============================================================================
 
 e = GymEnv(job_data['env'])
-policy = MLP(e.spec, hidden_sizes=job_data['policy_size'], seed=job_data['seed'])
+policy = RNN(e.spec, seed=job_data['seed']) #job_data['policy_size']
+'''policy = MLP(e.spec, hidden_sizes=job_data['policy_size'], seed=job_data['seed'])
 baseline = MLPBaseline(e.spec, reg_coef=1e-3, batch_size=job_data['vf_batch_size'],
-                       epochs=job_data['vf_epochs'], learn_rate=job_data['vf_learn_rate'])
+                       epochs=job_data['vf_epochs'], learn_rate=job_data['vf_learn_rate'])'''
 
 # Get demonstration data if necessary and behavior clone
 if job_data['algorithm'] != 'NPG':
@@ -58,7 +60,7 @@ if job_data['algorithm'] != 'NPG':
     print("========================================")
     demo_paths = pickle.load(open(job_data['demo_file'], 'rb'))
 
-    bc_agent = BC(demo_paths, policy=policy, epochs=job_data['bc_epochs'], batch_size=job_data['bc_batch_size'],
+    bc_agent = rnn_BC(demo_paths, policy=policy, epochs=job_data['bc_epochs'], seed=job_data['seed'], batch_size=1,
                   lr=job_data['bc_learn_rate'], loss_type='MSE', set_transforms=False)
     in_shift, in_scale, out_shift, out_scale = bc_agent.compute_transformations()
     bc_agent.set_transformations(in_shift, in_scale, out_shift, out_scale)
@@ -82,7 +84,7 @@ if job_data['algorithm'] != 'DAPG':
     # We throw away the demo data when training from scratch or fine-tuning with RL without explicit augmentation
     demo_paths = None
 
-pickle.dump(policy, open('bc_alone2', 'wb'))
+pickle.dump(policy, open('rnn_bc_alone2', 'wb'))
 '''
 # ===============================================================================
 # RL Loop
