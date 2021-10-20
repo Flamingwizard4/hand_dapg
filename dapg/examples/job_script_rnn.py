@@ -48,43 +48,44 @@ with open(EXP_FILE, 'w') as f:
 # ===============================================================================
 
 e = GymEnv(job_data['env'])
-policy = RNN(e.spec, seed=job_data['seed']) #job_data['policy_size']
-'''policy = MLP(e.spec, hidden_sizes=job_data['policy_size'], seed=job_data['seed'])
-baseline = MLPBaseline(e.spec, reg_coef=1e-3, batch_size=job_data['vf_batch_size'],
-                       epochs=job_data['vf_epochs'], learn_rate=job_data['vf_learn_rate'])'''
+for n in range(1, 7): #n_layers
+    policy = RNN(e.spec, n_layers=job_data['n_layers'], seed=job_data['seed']) #job_data['policy_size']
+    '''policy = MLP(e.spec, hidden_sizes=job_data['policy_size'], seed=job_data['seed'])
+    baseline = MLPBaseline(e.spec, reg_coef=1e-3, batch_size=job_data['vf_batch_size'],
+                        epochs=job_data['vf_epochs'], learn_rate=job_data['vf_learn_rate'])'''
 
-# Get demonstration data if necessary and behavior clone
-if job_data['algorithm'] != 'NPG':
-    print("========================================")
-    print("Collecting expert demonstrations")
-    print("========================================")
-    demo_paths = pickle.load(open(job_data['demo_file'], 'rb'))
+    # Get demonstration data if necessary and behavior clone
+    if job_data['algorithm'] != 'NPG':
+        print("========================================")
+        print("Collecting expert demonstrations")
+        print("========================================")
+        demo_paths = pickle.load(open(job_data['demo_file'], 'rb'))
 
-    bc_agent = rnn_BC(demo_paths, policy=policy, epochs=job_data['bc_epochs'], seed=job_data['seed'], batch_size=1,
-                  lr=job_data['bc_learn_rate'], loss_type='MSE', set_transforms=False)
-    in_shift, in_scale, out_shift, out_scale = bc_agent.compute_transformations()
-    bc_agent.set_transformations(in_shift, in_scale, out_shift, out_scale)
-    bc_agent.set_variance_with_data(out_scale)
+        bc_agent = rnn_BC(demo_paths, policy=policy, epochs=job_data['bc_epochs'], seed=job_data['seed'], batch_size=1,
+                    lr=job_data['bc_learn_rate'], loss_type='MSE', set_transforms=False)
+        in_shift, in_scale, out_shift, out_scale = bc_agent.compute_transformations()
+        bc_agent.set_transformations(in_shift, in_scale, out_shift, out_scale)
+        bc_agent.set_variance_with_data(out_scale)
 
-    ts = timer.time()
-    print("========================================")
-    print("Running BC with expert demonstrations")
-    print("========================================")
-    bc_agent.train()
-    print("========================================")
-    print("BC training complete !!!")
-    print("time taken = %f" % (timer.time() - ts))
-    print("========================================")
+        ts = timer.time()
+        print("========================================")
+        print("Running BC with expert demonstrations")
+        print("========================================")
+        bc_agent.train()
+        print("========================================")
+        print("BC training complete !!!")
+        print("time taken = %f" % (timer.time() - ts))
+        print("========================================")
 
-    if job_data['eval_rollouts'] >= 1:
-        score = e.evaluate_policy(policy, num_episodes=job_data['eval_rollouts'], mean_action=True)
-        print("Score with behavior cloning = %f" % score[0][0])
+        if job_data['eval_rollouts'] >= 1:
+            score = e.evaluate_policy(policy, num_episodes=job_data['eval_rollouts'], mean_action=True)
+            print("Score with behavior cloning = %f" % score[0][0])
 
-if job_data['algorithm'] != 'DAPG':
-    # We throw away the demo data when training from scratch or fine-tuning with RL without explicit augmentation
-    demo_paths = None
+    if job_data['algorithm'] != 'DAPG':
+        # We throw away the demo data when training from scratch or fine-tuning with RL without explicit augmentation
+        demo_paths = None
 
-pickle.dump(policy, open('rnn_bc_alone2', 'wb'))
+    pickle.dump(policy, open('rnn_bc%dn_alone2'%n, 'wb'))
 '''
 # ===============================================================================
 # RL Loop

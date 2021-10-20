@@ -16,10 +16,11 @@
 'bc_batch_size' :   32,
 'bc_epochs'     :   160,
 'bc_learn_rate' :   1e-3,
+'bc_n_layers'   :   3,
 
 # RL parameters (all params related to PG, value function, DAPG etc.)
 
-'policy_size'   :   (32, 32),
+'hidden_size'   :   (64),
 'vf_batch_size' :   64,
 'vf_epochs'     :   2,
 'vf_learn_rate' :   1e-3,

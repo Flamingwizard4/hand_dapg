@@ -47,7 +47,7 @@ with open(EXP_FILE, 'w') as f:
 # ===============================================================================
 
 e = GymEnv(job_data['env'])
-policy = MLP(e.spec, hidden_sizes=job_data['policy_size'], seed=job_data['seed'])
+policy = MLP(e.spec, hidden_sizes=tuple(job_data['policy_size'])*job_data['n_layers'], seed=job_data['seed'])
 baseline = MLPBaseline(e.spec, reg_coef=1e-3, batch_size=job_data['vf_batch_size'],
                        epochs=job_data['vf_epochs'], learn_rate=job_data['vf_learn_rate'])
 
@@ -82,7 +82,7 @@ if job_data['algorithm'] != 'DAPG':
     # We throw away the demo data when training from scratch or fine-tuning with RL without explicit augmentation
     demo_paths = None
 
-pickle.dump(policy, open('bc_alone2', 'wb'))
+pickle.dump(policy, open('bc_4n_alone.pickle', 'wb'))
 '''
 # ===============================================================================
 # RL Loop
