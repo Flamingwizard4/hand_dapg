@@ -26,19 +26,19 @@ import argparse
 # ===============================================================================
 
 parser = argparse.ArgumentParser(description='Policy gradient algorithms with demonstration data.')
-parser.add_argument('--output', type=str, required=True, help='location to store results')
+#parser.add_argument('--output', type=str, required=True, help='location to store results')
 parser.add_argument('--config', type=str, required=True, help='path to config file with exp params')
 args = parser.parse_args()
-JOB_DIR = args.output
+'''JOB_DIR = args.output
 if not os.path.exists(JOB_DIR):
-    os.mkdir(JOB_DIR)
+    os.mkdir(JOB_DIR)'''
 with open(args.config, 'r') as f:
     job_data = eval(f.read())
 assert 'algorithm' in job_data.keys()
 assert any([job_data['algorithm'] == a for a in ['NPG', 'BCRL', 'DAPG']])
 job_data['lam_0'] = 0.0 if 'lam_0' not in job_data.keys() else job_data['lam_0']
 job_data['lam_1'] = 0.0 if 'lam_1' not in job_data.keys() else job_data['lam_1']
-EXP_FILE = JOB_DIR + '/job_config.json'
+EXP_FILE = os.getcwd() + 'job_config.json' #EXP_FILE = JOB_DIR + '/job_config.json'
 with open(EXP_FILE, 'w') as f:
     json.dump(job_data, f, indent=4)
 
@@ -47,7 +47,7 @@ with open(EXP_FILE, 'w') as f:
 # ===============================================================================
 
 e = GymEnv(job_data['env'])
-policy = MLP(e.spec, hidden_sizes=job_data['policy_size'], seed=job_data['seed'])
+policy = MLP(e.spec, hidden_sizes=tuple(job_data['policy_size'])*job_data['n_layers'], seed=job_data['seed'])
 baseline = MLPBaseline(e.spec, reg_coef=1e-3, batch_size=job_data['vf_batch_size'],
                        epochs=job_data['vf_epochs'], learn_rate=job_data['vf_learn_rate'])
 
@@ -82,6 +82,8 @@ if job_data['algorithm'] != 'DAPG':
     # We throw away the demo data when training from scratch or fine-tuning with RL without explicit augmentation
     demo_paths = None
 
+pickle.dump(policy, open('bc_4n_alone.pickle', 'wb'))
+'''
 # ===============================================================================
 # RL Loop
 # ===============================================================================
@@ -109,3 +111,4 @@ train_agent(job_name=JOB_DIR,
             save_freq=job_data['save_freq'],
             evaluation_rollouts=job_data['eval_rollouts'])
 print("time taken = %f" % (timer.time()-ts))
+'''
