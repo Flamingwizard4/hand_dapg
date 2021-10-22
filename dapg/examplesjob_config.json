@@ -10,7 +10,11 @@
     "bc_batch_size": 32,
     "bc_epochs": 160,
     "bc_learn_rate": 0.001,
+<<<<<<< HEAD
     "bc_n_layers": 4,
+=======
+    "bc_n_layers": 3,
+>>>>>>> a9f28d49ca31dd3a0d5b41020521e39a7f2c4f95
     "hidden_size": 64,
     "vf_batch_size": 64,
     "vf_epochs": 2,

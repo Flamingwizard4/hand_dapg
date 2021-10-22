@@ -4,14 +4,13 @@ Note that DAPG generalizes PG and BC init + PG finetuning.
 With appropriate settings of parameters, we can recover the full family.
 """
 
-from mjrl.utils.gym_env_rnn import GymEnv
-from mjrl.policies.rnn import RNN
-#from mjrl.policies.gaussian_mlp import MLP
+from mjrl.utils.gym_env import GymEnv
+from mjrl.policies.gaussian_mlp import MLP
 from mjrl.baselines.quadratic_baseline import QuadraticBaseline
-#from mjrl.baselines.mlp_baseline import MLPBaseline
+from mjrl.baselines.mlp_baseline import MLPBaseline
 from mjrl.algos.npg_cg import NPG
 from mjrl.algos.dapg import DAPG
-from mjrl.algos.rnn_behavior_cloning import rnn_BC
+from mjrl.algos.behavior_cloning import BC
 from mjrl.utils.train_agent import train_agent
 from mjrl.samplers.core import sample_paths
 import os
@@ -48,12 +47,16 @@ with open(EXP_FILE, 'w') as f:
 # ===============================================================================
 
 e = GymEnv(job_data['env'])
-for n in range(1, 4): #n_layers
-    policy = RNN(e.spec, n_layers=n, seed=job_data['seed']) #job_data['policy_size']
-    '''policy = MLP(e.spec, hidden_sizes=job_data['policy_size'], seed=job_data['seed'])
-    baseline = MLPBaseline(e.spec, reg_coef=1e-3, batch_size=job_data['vf_batch_size'],
-                        epochs=job_data['vf_epochs'], learn_rate=job_data['vf_learn_rate'])'''
-
+baseline = MLPBaseline(e.spec, reg_coef=1e-3, batch_size=job_data['vf_batch_size'],
+                       epochs=job_data['vf_epochs'], learn_rate=job_data['vf_learn_rate'])
+scores = []
+for n in range(2, 4): #this loop can be for hidden size, n_layers, batch size, and epochs
+    hs = int(job_data["hidden_size"])
+    hidden_size = [hs]
+    for n_i in range(1, n):
+        hidden_size.append(hs)
+    hidden_size = tuple(hidden_size)
+    policy = MLP(e.spec, hidden_sizes=hidden_size, seed=job_data['seed']) #
     # Get demonstration data if necessary and behavior clone
     if job_data['algorithm'] != 'NPG':
         print("========================================")
@@ -61,7 +64,7 @@ for n in range(1, 4): #n_layers
         print("========================================")
         demo_paths = pickle.load(open(job_data['demo_file'], 'rb'))
 
-        bc_agent = rnn_BC(demo_paths, policy=policy, epochs=job_data['bc_epochs'], seed=job_data['seed'], batch_size=1,
+        bc_agent = BC(demo_paths, policy=policy, epochs=job_data['bc_epochs'], batch_size=job_data['bc_batch_size'],
                     lr=job_data['bc_learn_rate'], loss_type='MSE', set_transforms=False)
         in_shift, in_scale, out_shift, out_scale = bc_agent.compute_transformations()
         bc_agent.set_transformations(in_shift, in_scale, out_shift, out_scale)
@@ -71,7 +74,8 @@ for n in range(1, 4): #n_layers
         print("========================================")
         print("Running BC with expert demonstrations")
         print("========================================")
-        lox = bc_agent.train()
+        bc_agent.train()
+        lox = bc_agent.losses
         print("========================================")
         print("BC training complete !!!")
         print("time taken = %f" % (timer.time() - ts))
@@ -81,7 +85,8 @@ for n in range(1, 4): #n_layers
             score = e.evaluate_policy(policy, num_episodes=job_data['eval_rollouts'], mean_action=True)
             print("Score with behavior cloning = %f" % score[0][0])
             print("Performance with BC: %d / %d"%(score[0][4], job_data['eval_rollouts']))
-    with open("rnn_bc_%dn_alone_log.txt"%n, 'a') as log_file:
+            scores.append(score)
+    with open("bc_%dn_alone_log.txt"%n, 'a') as log_file:
         for lo in lox:
             log_file.write("%f\n"%lo)
         log_file.write("Total performance: %d / %d"%(score[0][4], job_data['eval_rollouts']))
@@ -89,7 +94,7 @@ for n in range(1, 4): #n_layers
         # We throw away the demo data when training from scratch or fine-tuning with RL without explicit augmentation
         demo_paths = None
 
-    pickle.dump(policy, open('rnn_bc_%dn_alone.pickle'%n, 'wb'))
+    pickle.dump(policy, open('bc_%dn_alone.pickle'%n, 'wb'))
 '''
 # ===============================================================================
 # RL Loop

@@ -42,6 +42,7 @@ def main(env_name, policy, mode, seed, episodes, log_std, terminate, device_path
     if policy is not None:
         policy = pickle.load(open(policy, 'rb'))
     else:
+        raise Exception
         policy = MLP(e.spec, hidden_sizes=(32,32), seed=seed, init_log_std=log_std)
 
     for ep in range(episodes):
