@@ -10,10 +10,8 @@
     "bc_batch_size": 32,
     "bc_epochs": 160,
     "bc_learn_rate": 0.001,
-    "policy_size": [
-        32,
-        32
-    ],
+    "bc_n_layers": 4,
+    "hidden_size": 64,
     "vf_batch_size": 64,
     "vf_epochs": 2,
     "vf_learn_rate": 0.001,

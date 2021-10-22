@@ -47,7 +47,7 @@ with open(EXP_FILE, 'w') as f:
 # ===============================================================================
 
 e = GymEnv(job_data['env'])
-policy = MLP(e.spec, hidden_sizes=tuple(job_data['policy_size'])*job_data['n_layers'], seed=job_data['seed'])
+policy = MLP(e.spec, hidden_sizes=tuple(job_data['hidden_size'])*job_data['bc_n_layers'], seed=job_data['seed'])
 baseline = MLPBaseline(e.spec, reg_coef=1e-3, batch_size=job_data['vf_batch_size'],
                        epochs=job_data['vf_epochs'], learn_rate=job_data['vf_learn_rate'])
 
@@ -68,11 +68,16 @@ if job_data['algorithm'] != 'NPG':
     print("========================================")
     print("Running BC with expert demonstrations")
     print("========================================")
-    bc_agent.train()
+    lv = bc_agent.train()
     print("========================================")
     print("BC training complete !!!")
     print("time taken = %f" % (timer.time() - ts))
     print("========================================")
+
+    with open("bc_alone_4n_losses.txt", 'a') as out_file:
+        for l in lv:
+            out_file.write("%f\n"%l)
+    
 
     if job_data['eval_rollouts'] >= 1:
         score = e.evaluate_policy(policy, num_episodes=job_data['eval_rollouts'], mean_action=True)
