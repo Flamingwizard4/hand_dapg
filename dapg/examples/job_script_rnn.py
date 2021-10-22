@@ -21,6 +21,7 @@ import mj_envs
 import time as timer
 import pickle
 import argparse
+from matplotlib import pyplot as plt
 
 # ===============================================================================
 # Get command line arguments
@@ -48,7 +49,7 @@ with open(EXP_FILE, 'w') as f:
 # ===============================================================================
 
 e = GymEnv(job_data['env'])
-for n in range(1, 4): #n_layers
+for n in range(2, 5): #n_layers
     policy = RNN(e.spec, n_layers=n, seed=job_data['seed']) #job_data['policy_size']
     '''policy = MLP(e.spec, hidden_sizes=job_data['policy_size'], seed=job_data['seed'])
     baseline = MLPBaseline(e.spec, reg_coef=1e-3, batch_size=job_data['vf_batch_size'],
@@ -85,6 +86,11 @@ for n in range(1, 4): #n_layers
         for lo in lox:
             log_file.write("%f\n"%lo)
         log_file.write("Total performance: %d / %d"%(score[0][4], job_data['eval_rollouts']))
+    plt.plot(lox)
+    plt.xlabel("Epochs")
+    plt.ylabel("Loss")
+    plt.savefig("rnn_bc_%dn_alone_log.png"%n)
+    plt.close()
     if job_data['algorithm'] != 'DAPG':
         # We throw away the demo data when training from scratch or fine-tuning with RL without explicit augmentation
         demo_paths = None

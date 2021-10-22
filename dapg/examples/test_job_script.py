@@ -50,7 +50,7 @@ e = GymEnv(job_data['env'])
 baseline = MLPBaseline(e.spec, reg_coef=1e-3, batch_size=job_data['vf_batch_size'],
                        epochs=job_data['vf_epochs'], learn_rate=job_data['vf_learn_rate'])
 scores = []
-for n in range(2, 4): #this loop can be for hidden size, n_layers, batch size, and epochs
+for n in range(2, 5): #this loop can be for hidden size, n_layers, batch size, and epochs
     hs = int(job_data["hidden_size"])
     hidden_size = [hs]
     for n_i in range(1, n):
