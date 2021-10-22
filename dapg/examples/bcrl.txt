@@ -20,7 +20,7 @@
 
 # RL parameters (all params related to PG, value function, DAPG etc.)
 
-'hidden_size'   :   (64),
+'hidden_size'   :   64,
 'vf_batch_size' :   64,
 'vf_epochs'     :   2,
 'vf_learn_rate' :   1e-3,

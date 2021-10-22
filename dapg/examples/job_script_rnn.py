@@ -48,8 +48,8 @@ with open(EXP_FILE, 'w') as f:
 # ===============================================================================
 
 e = GymEnv(job_data['env'])
-for n in range(1, 7): #n_layers
-    policy = RNN(e.spec, n_layers=job_data['n_layers'], seed=job_data['seed']) #job_data['policy_size']
+for n in range(1, 4): #n_layers
+    policy = RNN(e.spec, n_layers=n, seed=job_data['seed']) #job_data['policy_size']
     '''policy = MLP(e.spec, hidden_sizes=job_data['policy_size'], seed=job_data['seed'])
     baseline = MLPBaseline(e.spec, reg_coef=1e-3, batch_size=job_data['vf_batch_size'],
                         epochs=job_data['vf_epochs'], learn_rate=job_data['vf_learn_rate'])'''
@@ -71,7 +71,7 @@ for n in range(1, 7): #n_layers
         print("========================================")
         print("Running BC with expert demonstrations")
         print("========================================")
-        bc_agent.train()
+        lox = bc_agent.train()
         print("========================================")
         print("BC training complete !!!")
         print("time taken = %f" % (timer.time() - ts))
@@ -80,12 +80,16 @@ for n in range(1, 7): #n_layers
         if job_data['eval_rollouts'] >= 1:
             score = e.evaluate_policy(policy, num_episodes=job_data['eval_rollouts'], mean_action=True)
             print("Score with behavior cloning = %f" % score[0][0])
-
+            print("Performance with BC: %d / %d"%(score[0][4], job_data['eval_rollouts']))
+    with open("rnn_bc_%dn_alone_log.txt"%n, 'a') as log_file:
+        for lo in lox:
+            log_file.write("%f\n"%lo)
+        log_file.write("Total performance: %d / %d"%(score[0][4], job_data['eval_rollouts']))
     if job_data['algorithm'] != 'DAPG':
         # We throw away the demo data when training from scratch or fine-tuning with RL without explicit augmentation
         demo_paths = None
 
-    pickle.dump(policy, open('rnn_bc%dn_alone2'%n, 'wb'))
+    pickle.dump(policy, open('rnn_bc_%dn_alone.pickle'%n, 'wb'))
 '''
 # ===============================================================================
 # RL Loop
