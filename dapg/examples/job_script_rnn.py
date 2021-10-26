@@ -62,7 +62,7 @@ for n in range(2, 5): #n_layers
         print("========================================")
         demo_paths = pickle.load(open(job_data['demo_file'], 'rb'))
 
-        bc_agent = rnn_BC(demo_paths, policy=policy, epochs=job_data['bc_epochs'], seed=job_data['seed'], batch_size=1,
+        bc_agent = rnn_BC(demo_paths, policy=policy, epochs=job_data['bc_epochs'], seed=job_data['seed'], batch_size=job_data["bc_batch_size"],
                     lr=job_data['bc_learn_rate'], loss_type='MSE', set_transforms=False)
         in_shift, in_scale, out_shift, out_scale = bc_agent.compute_transformations()
         bc_agent.set_transformations(in_shift, in_scale, out_shift, out_scale)
