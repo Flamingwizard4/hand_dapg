@@ -8,7 +8,7 @@ import gym
 import numpy as np
 import pickle
 import torch
-from mjrl.utils.gym_env import GymEnv
+from mjrl.utils.gym_env_rnn import GymEnv
 from mjrl.policies.gaussian_mlp import MLP
 import torch
 from torch.autograd import Variable
@@ -34,7 +34,7 @@ def main(env_name, policy, mode, seed, episodes, log_std, terminate, device_path
     render = True
 
     # TODO(Aravind): Map to hardware if device_path is specified
-
+    seed = 321
     e = GymEnv(env_name)
     e.set_seed(seed)
     np.random.seed(seed)

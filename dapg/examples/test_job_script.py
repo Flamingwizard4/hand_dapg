@@ -20,6 +20,7 @@ import mj_envs
 import time as timer
 import pickle
 import argparse
+from matplotlib import pyplot as plt
 
 # ===============================================================================
 # Get command line arguments
@@ -49,12 +50,14 @@ with open(EXP_FILE, 'w') as f:
 e = GymEnv(job_data['env'])
 baseline = MLPBaseline(e.spec, reg_coef=1e-3, batch_size=job_data['vf_batch_size'],
                        epochs=job_data['vf_epochs'], learn_rate=job_data['vf_learn_rate'])
-scores = []
-for n in range(2, 5): #this loop can be for hidden size, n_layers, batch size, and epochs
+scores, avg_r = [], []
+max_layers = 5
+for n in range(1, max_layers+1): #this loop can be for hidden size, n_layers, batch size, and epochs
     hs = int(job_data["hidden_size"])
     hidden_size = [hs]
-    for n_i in range(1, n):
-        hidden_size.append(hs)
+    if n > 1:
+        for n_i in range(1, n):
+            hidden_size.append(hs)
     hidden_size = tuple(hidden_size)
     policy = MLP(e.spec, hidden_sizes=hidden_size, seed=job_data['seed']) #
     # Get demonstration data if necessary and behavior clone
@@ -72,7 +75,7 @@ for n in range(2, 5): #this loop can be for hidden size, n_layers, batch size, a
 
         ts = timer.time()
         print("========================================")
-        print("Running BC with expert demonstrations")
+        print("Running %d-layer MLP BC with expert demonstrations"%n)
         print("========================================")
         bc_agent.train()
         lox = bc_agent.losses
@@ -85,16 +88,31 @@ for n in range(2, 5): #this loop can be for hidden size, n_layers, batch size, a
             score = e.evaluate_policy(policy, num_episodes=job_data['eval_rollouts'], mean_action=True)
             print("Score with behavior cloning = %f" % score[0][0])
             print("Performance with BC: %d / %d"%(score[0][4], job_data['eval_rollouts']))
+            print("Average reward: %f"%score[0][5])
             scores.append(score)
-    with open("bc_%dn_alone_log.txt"%n, 'a') as log_file:
+    with open("mlp_bc_%dn_alone_log.txt"%n, 'a') as log_file:
         for lo in lox:
             log_file.write("%f\n"%lo)
         log_file.write("Total performance: %d / %d"%(score[0][4], job_data['eval_rollouts']))
+        log_file.write("Average reward: %f"%score[0][5])
+    plt.plot(lox)
+    plt.title("MLP BC Alone w/ %d Layers"%n)
+    plt.xlabel("Epoch")
+    plt.ylabel("Batch Loss")
+    plt.savefig("mlp_bc_%dn_alone_log.png"%n)
+    plt.close()
     if job_data['algorithm'] != 'DAPG':
         # We throw away the demo data when training from scratch or fine-tuning with RL without explicit augmentation
         demo_paths = None
 
-    pickle.dump(policy, open('bc_%dn_alone.pickle'%n, 'wb'))
+    pickle.dump(policy, open('mlp_bc_%dn_alone.pickle'%n, 'wb'))
+    avg_r.append(score[0][5])
+plt.plot(range(1, max_layers+1),avg_r)
+plt.title("MLP BC Depth vs Reward")
+plt.xlabel("# of Layers")
+plt.ylabel("Average Reward")
+plt.savefig("mlp_bc_%d-%dn_alone_graph.png"%(n, max_layers))
+plt.close()
 '''
 # ===============================================================================
 # RL Loop
