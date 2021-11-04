@@ -83,12 +83,11 @@ for n in range(1, max_layers+1): #n_layers
             score = e.evaluate_policy(policy, num_episodes=job_data['eval_rollouts'], mean_action=True)
             print("Score with behavior cloning = %f" % score[0][0])
             print("Performance with BC: %d / %d"%(score[0][4], job_data['eval_rollouts']))
-            print("Average reward: %f"%score[0][5])
     with open("rnn_bc_%dn_alone_log.txt"%n, 'a') as log_file:
         for lo in lox:
             log_file.write("%f\n"%lo)
         log_file.write("Total performance: %d / %d"%(score[0][4], job_data['eval_rollouts']))
-        log_file.write("Average reward: %f"%score[0][5])
+        log_file.write("Average reward: %f"%score[0][0])
     plt.plot(lox)
     plt.title("RNN BC Alone w/ %d Layers"%n)
     plt.xlabel("Epoch")
@@ -100,7 +99,7 @@ for n in range(1, max_layers+1): #n_layers
         demo_paths = None
 
     pickle.dump(policy, open('rnn_bc_%dn_alone.pickle'%n, 'wb'))
-    avg_rewards_n.append(score[0][5])
+    avg_rewards_n.append(score[0][0])
 
     #policy.print_param_values()
     #raise Exception
@@ -110,12 +109,12 @@ plt.xlabel("# of Layers")
 plt.ylabel("Average Reward")
 plt.savefig("rnn_bc_%d-%dn_alone_graph.png"%(1, max_layers))
 plt.close()
-
+'''
 max_batch_size = 40
 avg_rewards_b = []
 ### Varying Batch Size
 #for b in range(8, max_batch_size+1, 8):
-for b in [x**2 for x in range(2, 8)]:
+for b in [x**2 for x in range(2, 7)]:
     policy = RNN(e.spec, n_layers=2, seed=job_data['seed']) #job_data['policy_size']
     #policy = MLP(e.spec, hidden_sizes=job_data['policy_size'], seed=job_data['seed'])
     #baseline = MLPBaseline(e.spec, reg_coef=1e-3, batch_size=job_data['vf_batch_size'],
@@ -144,15 +143,14 @@ for b in [x**2 for x in range(2, 8)]:
         print("========================================")
 
         if job_data['eval_rollouts'] >= 1:
-            score = e.evaluate_policy(policy, num_episodes=job_data['eval_rollouts'], mean_action=True)
+            score = e.evaluate_policy(policy, num_episodes=job_data['eval_rollouts'], mean_action=True, seed=321)
             print("Score with behavior cloning = %f" % score[0][0])
             print("Performance with BC: %d / %d"%(score[0][4], job_data['eval_rollouts']))
-            print("Average reward: %f"%score[0][5])
     with open("rnn_bc_%db_alone_log.txt"%b, 'a') as log_file:
         for lo in lox:
             log_file.write("%f\n"%lo)
         log_file.write("Total performance: %d / %d"%(score[0][4], job_data['eval_rollouts']))
-        log_file.write("Average reward: %f"%score[0][5])
+        log_file.write("Average reward: %f"%score[0][0])
     plt.plot(lox)
     plt.title("RNN BC Alone w/ Batch Size of %d"%b)
     plt.xlabel("Epoch")
@@ -164,16 +162,16 @@ for b in [x**2 for x in range(2, 8)]:
         demo_paths = None
 
     pickle.dump(policy, open('rnn_bc_%db_alone.pickle'%b, 'wb'))
-    avg_rewards_b.append(score[0][5])
+    avg_rewards_b.append(score[0][0])
 
 #plt.plot([batch for batch in range(8, max_batch_size+1, 8)], avg_rewards_b)
-plt.plot([batch**2 for batch in range(2, 8)], avg_rewards_b)
+plt.plot([batch**2 for batch in range(2, 7)], avg_rewards_b)
 plt.title("RNN BC Batch Size vs Reward")
 plt.xlabel("Batch Size")
 #plt.xscale('linear')
 plt.ylabel("Average Reward")
 #plt.savefig("rnn_bc_%d-%db_alone_graph.png"%(8, max_batch_size))
-plt.savefig("rnn_bc_%d-%db_alone_graph.png"%(4, 49))
+plt.savefig("rnn_bc_%d-%db_alone_graph.png"%(4, 64))
 plt.close()
 '''
 tested_epochs = 3
@@ -211,12 +209,11 @@ for t in [500*(2**x) for x in range(tested_epochs)]:
             score = e.evaluate_policy(policy, num_episodes=job_data['eval_rollouts'], mean_action=True)
             print("Score with behavior cloning = %f" % score[0][0])
             print("Performance with BC: %d / %d"%(score[0][4], job_data['eval_rollouts']))
-            print("Average reward: %f"%score[0][5])
     with open("rnn_bc_%dt_alone_log.txt"%t, 'a') as log_file:
         for lo in lox:
             log_file.write("%f\n"%lo)
         log_file.write("Total performance: %d / %d"%(score[0][4], job_data['eval_rollouts']))
-        log_file.write("Average reward: %f"%score[0][5])
+        log_file.write("Average reward: %f"%score[0][0])
     plt.plot(lox)
     plt.title("RNN BC Alone w/ %d Epochs"%t)
     plt.xlabel("Epoch")
@@ -229,7 +226,7 @@ for t in [500*(2**x) for x in range(tested_epochs)]:
         demo_paths = None
 
     pickle.dump(policy, open('rnn_bc_%dt_alone.pickle'%t, 'wb'))
-    avg_rewards_t.append(score[0][5])
+    avg_rewards_t.append(score[0][0])
 
 plt.plot([80*(2**x) for x in range(tested_epochs)], avg_rewards_t)
 plt.title("RNN BC Training Duration vs Reward")
@@ -238,6 +235,7 @@ plt.xscale('log')
 plt.ylabel("Average Reward")
 plt.savefig("rnn_bc_%d-%dt_alone_graph.png"%(80, 80*2**(tested_epochs-1)))
 plt.close()
+'''
 '''
 tested_rates = 5
 avg_rewards_l = []
@@ -274,12 +272,11 @@ for l in [(0.0001*(10**(x/2)) if x % 2 == 0 else 0.0005*(10**(x//2))) for x in r
             score = e.evaluate_policy(policy, num_episodes=job_data['eval_rollouts'], mean_action=True)
             print("Score with behavior cloning = %f" % score[0][0])
             print("Performance with BC: %d / %d"%(score[0][4], job_data['eval_rollouts']))
-            print("Average reward: %f"%score[0][5])
     with open("rnn_bc_%flr_alone_log.txt"%l, 'a') as log_file:
         for lo in lox:
             log_file.write("%f\n"%lo)
         log_file.write("Total performance: %d / %d"%(score[0][4], job_data['eval_rollouts']))
-        log_file.write("Average reward: %f"%score[0][5])
+        log_file.write("Average reward: %f"%score[0][0])
     plt.plot(lox)
     plt.title("RNN BC Alone w/ %f Learning Rate"%l)
     plt.xlabel("Epoch")
@@ -292,7 +289,7 @@ for l in [(0.0001*(10**(x/2)) if x % 2 == 0 else 0.0005*(10**(x//2))) for x in r
         demo_paths = None
 
     pickle.dump(policy, open('rnn_bc_%flr_alone.pickle'%l, 'wb'))
-    avg_rewards_l.append(score[0][5])
+    avg_rewards_l.append(score[0][0])
 
 plt.plot([(0.0001*(10**(x/2)) if x % 2 == 0 else 0.0005*(10**(x//2))) for x in range(tested_rates)], avg_rewards_l)
 plt.title("RNN BC LR vs Reward")

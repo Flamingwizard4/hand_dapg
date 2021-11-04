@@ -14,9 +14,9 @@
 
 'demo_file'     :   '../demonstrations/relocate-v0_demos.pickle',
 'bc_batch_size' :   32,
-'bc_epochs'     :   160,
+'bc_epochs'     :   320,
 'bc_learn_rate' :   1e-3,
-'bc_n_layers'   :   4,
+'bc_n_layers'   :   3,
 
 # RL parameters (all params related to PG, value function, DAPG etc.)
 
