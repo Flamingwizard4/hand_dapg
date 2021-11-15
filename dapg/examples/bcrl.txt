@@ -13,14 +13,15 @@
 # Demonstration data and behavior cloning
 
 'demo_file'     :   '../demonstrations/relocate-v0_demos.pickle',
-'bc_batch_size' :   32,
-'bc_epochs'     :   320,
+'bc_batch_size' :   8,
+'bc_epochs'     :   60,
 'bc_learn_rate' :   1e-3,
-'bc_n_layers'   :   3,
+'bc_n_layers'   :   2,
+'bc_hidden_size':   64,
 
 # RL parameters (all params related to PG, value function, DAPG etc.)
 
-'hidden_size'   :   64,
+'vf_hidden_size':   64,
 'vf_batch_size' :   64,
 'vf_epochs'     :   2,
 'vf_learn_rate' :   1e-3,

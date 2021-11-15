@@ -56,13 +56,13 @@ def main(env_name, policy, mode, seed, episodes, log_std, terminate, device_path
                 ob = Variable(torch.from_numpy(o).float(), requires_grad=False)
             ob = torch.unsqueeze(ob, 0)
             ob = torch.unsqueeze(ob, 0)
-            obs = torch.cat((obs, ob)) if t > 0 else ob
-            a = policy.get_action(obs)[0] if mode == 'exploration' else policy.get_action(obs)[1]['evaluation']
+            obs = torch.cat((obs, ob),1) if t > 0 else ob
+            a = policy.get_action(obs.detach())[0] #if mode == 'exploration' else policy.get_action(obs)[1]['evaluation']
             if type(a) is not torch.Tensor:
                 ac = Variable(torch.from_numpy(a).float(), requires_grad=False)
             ac = torch.unsqueeze(ac, 0)
             ac = torch.unsqueeze(ac, 0)
-            acts = torch.cat((acts, ac)) if t > 0 else ac
+            acts = torch.cat((acts, ac),1) if t > 0 else ac
             next_o, r, done, ifo = e.step(a)
             if terminate is False:
                 done = False

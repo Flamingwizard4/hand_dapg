@@ -20,6 +20,7 @@ import mj_envs
 import time as timer
 import pickle
 import argparse
+from matplotlib import pyplot as plt
 
 # ===============================================================================
 # Get command line arguments
@@ -45,49 +46,95 @@ with open(EXP_FILE, 'w') as f:
 # ===============================================================================
 # Train Loop
 # ===============================================================================
-
+avg_train_reward, avg_test_reward = [], []
 e = GymEnv(job_data['env'])
-policy = MLP(e.spec, hidden_sizes=tuple(job_data['hidden_size'])*job_data['bc_n_layers'], seed=job_data['seed'])
-baseline = MLPBaseline(e.spec, reg_coef=1e-3, batch_size=job_data['vf_batch_size'],
-                       epochs=job_data['vf_epochs'], learn_rate=job_data['vf_learn_rate'])
+init_batch = 1
+tested_batches = 4
+for b in [2**x for x in range(init_batch, init_batch+tested_batches)]:
 
-# Get demonstration data if necessary and behavior clone
-if job_data['algorithm'] != 'NPG':
-    print("========================================")
-    print("Collecting expert demonstrations")
-    print("========================================")
-    demo_paths = pickle.load(open(job_data['demo_file'], 'rb'))
+    policy = MLP(e.spec, hidden_sizes=(64,64), seed=job_data['seed'])
+    baseline = MLPBaseline(e.spec, reg_coef=1e-3, batch_size=job_data['vf_batch_size'],
+                        epochs=job_data['vf_epochs'], learn_rate=job_data['vf_learn_rate'])
 
-    bc_agent = BC(demo_paths, policy=policy, epochs=job_data['bc_epochs'], batch_size=job_data['bc_batch_size'],
-                  lr=job_data['bc_learn_rate'], loss_type='MSE', set_transforms=False)
-    in_shift, in_scale, out_shift, out_scale = bc_agent.compute_transformations()
-    bc_agent.set_transformations(in_shift, in_scale, out_shift, out_scale)
-    bc_agent.set_variance_with_data(out_scale)
+    # Get demonstration data if necessary and behavior clone
+    if job_data['algorithm'] != 'NPG':
+        print("========================================")
+        print("Collecting expert demonstrations")
+        print("========================================")
+        demo_paths = pickle.load(open(job_data['demo_file'], 'rb'))
 
-    ts = timer.time()
-    print("========================================")
-    print("Running BC with expert demonstrations")
-    print("========================================")
-    lv = bc_agent.train()
-    print("========================================")
-    print("BC training complete !!!")
-    print("time taken = %f" % (timer.time() - ts))
-    print("========================================")
+        bc_agent = BC(demo_paths[:-5], policy=policy, env=e, epochs=job_data['bc_epochs'], batch_size=b,
+                    lr=job_data['bc_learn_rate'], loss_type='MSE', set_transforms=False)
+        in_shift, in_scale, out_shift, out_scale = bc_agent.compute_transformations()
+        bc_agent.set_transformations(in_shift, in_scale, out_shift, out_scale)
+        bc_agent.set_variance_with_data(out_scale)
 
-    with open("bc_alone_4n_losses.txt", 'a') as out_file:
-        for l in lv:
-            out_file.write("%f\n"%l)
-    
+        ts = timer.time()
+        print("========================================")
+        print("Running BC with expert demonstrations")
+        print("========================================")
+        lv = bc_agent.train()
+        print("========================================")
+        print("BC training complete !!!")
+        print("time taken = %f" % (timer.time() - ts))
+        print("========================================")
 
-    if job_data['eval_rollouts'] >= 1:
-        score = e.evaluate_policy(policy, num_episodes=job_data['eval_rollouts'], mean_action=True)
-        print("Score with behavior cloning = %f" % score[0][0])
+        '''with open("bc_alone_4n_losses.txt", 'a') as out_file:
+            for l in lv:
+                out_file.write("%f\n"%l)'''
+        
+        train_score, test_score, p = 0, 0, 0
+        if job_data['eval_rollouts'] >= 1:
+            #score = e.evaluate_policy(policy, num_episodes=job_data['eval_rollouts'], mean_action=True)
+            #print("Score with behavior cloning = %f" % score[0][0])
+            train_losses, test_losses = e.evaluate_train_vs_test(bc_agent, demo_paths)
+        for r in train_losses:
+            #print("Training loss with mse cloning = %f" % r[0])
+            #print("Score with selfrolled mse = %f" % r[1])
+            #print("Performance with selfrolled policy: %d" % r[2])
+            train_score += r[0]
+        for r in test_losses:
+            #print("Test loss with mse cloning = %f" % r[0])
+            #print("Score with selfrolled mse = %f" % r[1])
+            #print("Performance with selfrolled policy: %d" % r[2])
+            test_score += r[0] #traditional mse
+            p += r[2]
+        train_score /= len(train_losses)
+        test_score /= len(test_losses)
+        p /= len(test_losses)
+    with open("bc_%dn_%db_%de_alone.txt"%(job_data['bc_n_layers'], b, job_data['bc_epochs']), 'a') as log_file:
+        for lo in lv:
+            log_file.write("%f\n"%lo)
+        log_file.write("Test performance: %d / %d\n"%(p, len(test_losses)))#(score[0][4], job_data['eval_rollouts']))
+        log_file.write("Average trainig loss: %f\n"%train_score)
+        log_file.write("Average eval loss: %f"%test_score)
+    plt.plot(lv)
+    plt.title("MLP BC Alone w/ Batch Size of %d"%b)
+    plt.xlabel("Epoch")
+    plt.ylabel("Batch Loss")
+    plt.savefig("bc_%dn_%db_%de_alone_log.png"%(job_data['bc_n_layers'], b, job_data['bc_epochs']))
+    plt.close()
 
-if job_data['algorithm'] != 'DAPG':
-    # We throw away the demo data when training from scratch or fine-tuning with RL without explicit augmentation
-    demo_paths = None
+    if job_data['algorithm'] != 'DAPG':
+        # We throw away the demo data when training from scratch or fine-tuning with RL without explicit augmentation
+        demo_paths = None
 
-pickle.dump(policy, open('bc_4n_alone.pickle', 'wb'))
+    pickle.dump(policy, open('bc_%dn_%db_%de_alone.pickle'%(job_data['bc_n_layers'], b, job_data['bc_epochs']), 'wb'))
+    avg_train_reward.append(train_score)
+    avg_test_reward.append(test_score)
+
+plt.plot([2**batch for batch in range(init_batch, init_batch+tested_batches)], avg_train_reward, label="Train Loss")
+plt.plot([2**batch for batch in range(init_batch, init_batch+tested_batches)], avg_test_reward, label="Test Loss")
+plt.title("MLP BC Batch Size vs Train/Test Loss")
+plt.xlabel("Batch Size")
+#plt.xscale('linear')
+plt.ylabel("Average Loss")
+plt.legend()
+plt.savefig("mlp_bc_%d-%db_alone_graph.png"%(2, 2**tested_batches))
+plt.close()
+
+
+#for n in range(2, 6):
 '''
 # ===============================================================================
 # RL Loop
