@@ -41,7 +41,7 @@ def main(env_name, policy, mode, seed, episodes, log_std, terminate, device_path
     render = True
 
     # TODO(Aravind): Map to hardware if device_path is specified
-    seed = 321
+    seed = 123
     e = GymEnv(env_name)
     e.set_seed(seed)
     np.random.seed(seed)
@@ -56,6 +56,7 @@ def main(env_name, policy, mode, seed, episodes, log_std, terminate, device_path
         train_ep = train_data[ep]
         train_init = train_ep['observations'][0]
         o = e.reset()
+        e.set_env_state(train_ep['init_state_dict'])
         rew = 0.0
         t = 0
         done = False
