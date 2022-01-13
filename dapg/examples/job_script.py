@@ -214,7 +214,7 @@ plt.ylabel("Average Loss")
 plt.legend()
 plt.savefig("mlp_bc_%d-%db_alone_graph.png"%(init_layer, init_layer + tested_layers - 1))
 plt.close()
-'''
+
 # ===============================================================================
 # RL Loop
 # ===============================================================================
@@ -242,4 +242,3 @@ train_agent(job_name=JOB_DIR,
             save_freq=job_data['save_freq'],
             evaluation_rollouts=job_data['eval_rollouts'])
 print("time taken = %f" % (timer.time()-ts))
-'''
