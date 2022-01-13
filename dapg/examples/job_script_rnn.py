@@ -4,7 +4,7 @@ Note that DAPG generalizes PG and BC init + PG finetuning.
 With appropriate settings of parameters, we can recover the full family.
 """
 
-from mjrl.utils.gym_env import GymEnv
+from mjrl.utils.gym_env_rnn import GymEnv
 from mjrl.policies.rnn import RNN
 #from mjrl.policies.gaussian_mlp import MLP
 from mjrl.baselines.quadratic_baseline import QuadraticBaseline
@@ -49,95 +49,6 @@ with open(EXP_FILE, 'w') as f:
 # ===============================================================================
 
 e = GymEnv(job_data['env'])
-
-
-### Varying Training Epochs
-init_epochs = 200
-tested_epochs = 1
-avg_train_rewards_t, avg_test_rewards_t = [], []
-for t in [init_epochs*(2**x) for x in range(tested_epochs)]:
-    policy = RNN(e.spec, hidden_size=job_data['bc_hidden_size'], n_layers=job_data['bc_n_layers'], fc_sizes=tuple([job_data['bc_mlp_hz'] for f in range(2)]),
-    seed=job_data['seed'])
-    #policy = MLP(e.spec, hidden_sizes=job_data['policy_size'], seed=job_data['seed'])
-    #baseline = MLPBaseline(e.spec, reg_coef=1e-3, batch_size=job_data['vf_batch_size'],
-                        #epochs=job_data['vf_epochs'], learn_rate=job_data['vf_learn_rate'])
-
-    # Get demonstration data if necessary and behavior clone
-    if job_data['algorithm'] != 'NPG':
-        print("========================================")
-        print("Collecting expert demonstrations")
-        print("========================================")
-        demo_paths = pickle.load(open(job_data['demo_file'], 'rb'))
-        bc_agent = rnn_BC(demo_paths[:-5], policy, e, epochs=t, seed=job_data['seed'], batch_size=job_data['bc_batch_size'],
-                    lr=job_data['bc_learn_rate'], loss_type='MSE', set_transforms=False)
-        in_shift, in_scale, out_shift, out_scale = bc_agent.compute_transformations()
-        bc_agent.set_transformations(in_shift, in_scale, out_shift, out_scale)
-        bc_agent.set_variance_with_data(out_scale)
-
-        ts = timer.time()
-        print("========================================")
-        print("Running %d-layer, %d-batch size RNN BC with expert demonstrations for %d epochs"%(job_data['bc_n_layers'], job_data['bc_batch_size'], t))
-        print("========================================")
-        lox = bc_agent.train()
-        print("========================================")
-        print("BC training complete !!!")
-        print("time taken = %f" % (timer.time() - ts))
-        print("========================================")
-
-        # if job_data['eval_rollouts'] >= 1:
-        #     score = e.evaluate_train_vs_test(policy, demo_paths, num_episodes=job_data['eval_rollouts'], mean_action=True, seed=321)
-        #     print("Score with behavior cloning = %f" % score[0][0])
-        #     print("Performance with BC: %d / %d"%(score[0][4], job_data['eval_rollouts']))
-        train_losses, test_losses = e.evaluate_train_vs_test(bc_agent, demo_paths)
-        train_score, test_score, p = 0, 0, 0
-        for r in train_losses:
-            print("Training loss with mse cloning = %f" % r[0])
-            print("Score with selfrolled mse = %f" % r[1])
-            print("Performance with selfrolled policy: %d" % r[2])
-            train_score += r[0]
-        for r in test_losses:
-            print("Test loss with mse cloning = %f" % r[0])
-            print("Score with selfrolled mse = %f" % r[1])
-            print("Performance with selfrolled policy: %d" % r[2])
-            test_score += r[0] #traditional mse
-            p += r[2]
-        train_score /= len(train_losses)
-        test_score /= len(test_losses)
-        p /= len(test_losses)
-    with open("rnn_bc_%dn_%db_%de_alone_log.txt"%(job_data['bc_n_layers'], job_data["bc_batch_size"], t), 'a') as log_file:
-        for lo in lox:
-            log_file.write("%f\n"%lo)
-        log_file.write("Training performance: %d / %d\n"%(p, len(test_losses)))#(score[0][4], job_data['eval_rollouts']))
-        log_file.write("Average training loss: %f\n"%train_score)
-        log_file.write("Average eval loss: %f"%test_score)
-    
-    plt.plot(lox)
-    plt.title("%d-layer, %d-batch size RNN BC Alone w/ %d Epochs"%(job_data['bc_n_layers'], job_data['bc_batch_size'], t))
-    plt.xlabel("Epoch")
-    plt.xscale('linear')
-    plt.ylabel("Batch Loss")
-    plt.savefig("rnn_bc_%dn_%db_%de_alone_log.png"%(job_data['bc_n_layers'], job_data["bc_batch_size"], t))
-    plt.close()
-    if job_data['algorithm'] != 'DAPG':
-        # We throw away the demo data when training from scratch or fine-tuning with RL without explicit augmentation
-        demo_paths = None
-
-    pickle.dump(policy, open('rnn_bc_%dn_%db_%de_alone.pickle'%(job_data['bc_n_layers'], job_data["bc_batch_size"], t), 'wb'))
-    avg_train_rewards_t.append(train_score)
-    avg_test_rewards_t.append(test_score)
-    
-
-plt.plot([init_epochs*(2**x) for x in range(tested_epochs)], avg_train_rewards_t, label="Train Loss")
-plt.plot([init_epochs*(2**x) for x in range(tested_epochs)], avg_test_rewards_t, label="Test Loss")
-plt.title("RNN BC Training Epochs vs Test/Train Loss")
-plt.xlabel("Training Epochs")
-plt.xscale('log')
-plt.ylabel("Avg. Loss")
-plt.legend()
-plt.savefig("rnn_bc_%d-%dt_alone_graph.png"%(init_epochs, init_epochs*2**(tested_epochs-1)))
-plt.close()
-
-
 '''
 ###Varying Number of Layers
 init_layers = 2
@@ -393,6 +304,91 @@ plt.legend()
 plt.savefig("rnn_bc_%d-%dhz_alone_graph.png"%(init_hz, init_hz*2**(tested_hz-1)))
 plt.close()
 '''
+
+### Varying Training Epochs
+init_epochs = 240
+tested_epochs = 1
+avg_train_rewards_t, avg_test_rewards_t = [], []
+for t in [init_epochs*(2**x) for x in range(tested_epochs)]:
+    policy = RNN(e.spec, hidden_size=job_data['bc_hidden_size'], n_layers=job_data['bc_n_layers'], fc_sizes=tuple([job_data['bc_mlp_hz'] for f in range(2)]), seed=job_data['seed'])
+    #policy = MLP(e.spec, hidden_sizes=job_data['policy_size'], seed=job_data['seed'])
+    #baseline = MLPBaseline(e.spec, reg_coef=1e-3, batch_size=job_data['vf_batch_size'],
+                        #epochs=job_data['vf_epochs'], learn_rate=job_data['vf_learn_rate'])
+
+    # Get demonstration data if necessary and behavior clone
+    if job_data['algorithm'] != 'NPG':
+        print("========================================")
+        print("Collecting expert demonstrations")
+        print("========================================")
+        demo_paths = pickle.load(open(job_data['demo_file'], 'rb'))
+        bc_agent = rnn_BC(demo_paths[:-5], policy, e, epochs=t, seed=job_data['seed'], batch_size=job_data['bc_batch_size'],
+                    lr=job_data['bc_learn_rate'], loss_type='MSE', set_transforms=False)
+        in_shift, in_scale, out_shift, out_scale = bc_agent.compute_transformations()
+        bc_agent.set_transformations(in_shift, in_scale, out_shift, out_scale)
+        bc_agent.set_variance_with_data(out_scale)
+
+        ts = timer.time()
+        print("========================================")
+        print("Running %d-layer, %d-batch size RNN BC with expert demonstrations for %d epochs"%(job_data['bc_n_layers'], job_data['bc_batch_size'], t))
+        print("========================================")
+        lox = bc_agent.train()
+        print("========================================")
+        print("BC training complete !!!")
+        print("time taken = %f" % (timer.time() - ts))
+        print("========================================")
+
+        # if job_data['eval_rollouts'] >= 1:
+        #     score = e.evaluate_train_vs_test(policy, demo_paths, num_episodes=job_data['eval_rollouts'], mean_action=True, seed=321)
+        #     print("Score with behavior cloning = %f" % score[0][0])
+        #     print("Performance with BC: %d / %d"%(score[0][4], job_data['eval_rollouts']))
+        train_losses, test_losses = e.evaluate_train_vs_test(bc_agent, demo_paths)
+        train_score, test_score, p = 0, 0, 0
+        for r in train_losses:
+            print("Training loss with mse cloning = %f" % r[0])
+            print("Score with selfrolled mse = %f" % r[1])
+            print("Performance with selfrolled policy: %d" % r[2])
+            train_score += r[0]
+        for r in test_losses:
+            print("Test loss with mse cloning = %f" % r[0])
+            print("Score with selfrolled mse = %f" % r[1])
+            print("Performance with selfrolled policy: %d" % r[2])
+            test_score += r[0] #traditional mse
+            p += r[2]
+        train_score /= len(train_losses)
+        test_score /= len(test_losses)
+        p /= len(test_losses)
+    with open("rnn_bc_%dn_%db_%de_alone_log.txt"%(job_data['bc_n_layers'], job_data["bc_batch_size"], t), 'a') as log_file:
+        for lo in lox:
+            log_file.write("%f\n"%lo)
+        log_file.write("Training performance: %d / %d\n"%(p, len(test_losses)))#(score[0][4], job_data['eval_rollouts']))
+        log_file.write("Average training loss: %f\n"%train_score)
+        log_file.write("Average eval loss: %f"%test_score)
+    
+    plt.plot(lox)
+    plt.title("%d-layer, %d-batch size RNN BC Alone w/ %d Epochs"%(job_data['bc_n_layers'], job_data['bc_batch_size'], t))
+    plt.xlabel("Epoch")
+    plt.xscale('linear')
+    plt.ylabel("Batch Loss")
+    plt.savefig("rnn_bc_%dn_%db_%de_alone_log.png"%(job_data['bc_n_layers'], job_data["bc_batch_size"], t))
+    plt.close()
+    if job_data['algorithm'] != 'DAPG':
+        # We throw away the demo data when training from scratch or fine-tuning with RL without explicit augmentation
+        demo_paths = None
+
+    pickle.dump(policy, open('rnn_bc_%dn_%db_%de_alone.pickle'%(job_data['bc_n_layers'], job_data["bc_batch_size"], t), 'wb'))
+    avg_train_rewards_t.append(train_score)
+    avg_test_rewards_t.append(test_score)
+    
+
+plt.plot([init_epochs*(2**x) for x in range(tested_epochs)], avg_train_rewards_t, label="Train Loss")
+plt.plot([init_epochs*(2**x) for x in range(tested_epochs)], avg_test_rewards_t, label="Test Loss")
+plt.title("RNN BC Training Epochs vs Test/Train Loss")
+plt.xlabel("Training Epochs")
+plt.xscale('log')
+plt.ylabel("Avg. Loss")
+plt.legend()
+plt.savefig("rnn_bc_%d-%dt_alone_graph.png"%(init_epochs, init_epochs*2**(tested_epochs-1)))
+plt.close()
 
 '''
 ### Varying Learning Rates

@@ -1,4 +1,0 @@
-INFO (hyperopt.mongoexp): job exception: No registered env with id: relocate-v0
-INFO (hyperopt.mongoexp): job exception: No registered env with id: relocate-v0
-INFO (hyperopt.mongoexp): job exception: No registered env with id: relocate-v0
-INFO (hyperopt.mongoexp): job exception: No registered env with id: relocate-v0
